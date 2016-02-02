@@ -1,0 +1,135 @@
+
+/*
+
+ *  Author: BhaviK
+ 
+ */ 
+
+
+#include <avr/io.h>
+#include <util/delay.h>
+#include<stdlib.h>
+#include<avr/interrupt.h>
+#define DataPorts PORTC
+#define CommandPorts PORTD
+#define RS PD7
+#define RW PD1
+#define En PD0
+double Vin,Vact;
+char PrintString[7];
+
+char StartAddOfCol[2] = {0,64};
+
+void Send_Command(uint8_t Command)
+{
+	CommandPorts &= ~(1<<RS);
+	DataPorts = Command;
+	CommandPorts |= (1<<En);
+	_delay_ms(10);
+	CommandPorts &= ~(1<<En);
+	_delay_ms(10);
+}
+
+void Send_Character(char Character)
+{
+	CommandPorts |= (1<<RS);
+	DataPorts = Character;
+	CommandPorts |= (1<<En);
+	_delay_ms(10);
+	CommandPorts &= ~(1<<En);
+	_delay_ms(10);
+}
+
+void Send_String (char *String)
+{
+	while(*String > 0)
+	{
+		Send_Character(*String);
+		String++;
+	}
+}
+
+void Location (uint8_t x,uint8_t y)
+{
+	Send_Command(0x80+StartAddOfCol[y-1]+(x-1));
+}
+
+void Initialise ()
+{
+	CommandPorts &= ~(1<<RS);
+	CommandPorts &= ~(1<<En);
+	_delay_ms(20);
+	Send_Command(0x30);
+	_delay_ms(5);
+	Send_Command(0x30);
+	_delay_ms(1);
+	Send_Command(0x30);
+	_delay_ms(10);
+	Send_Command(0x38);
+	_delay_ms(1);
+	Send_Command(0x0C);
+	_delay_ms(1);
+	Send_Command(0x01);
+	_delay_ms(1);
+	Send_Command(0x06);
+	_delay_ms(1);
+}
+
+
+int main()
+{
+	DDRD = (1<<RS|1<<RW|1<<En|1<<PIND5);
+	DDRC = 0xFF;
+	//DDRA= ~(1<<PINA0);
+	DataPorts = CommandPorts = 0x00;
+	DDRB = 1<<PB0;
+	PORTB &= ~(1<<PB0);
+	TCCR1A |= 1<<COM1A1 | 1<<COM1B1 | 1<<WGM11;
+	TCCR1B |= 1<<WGM12 | 1<<WGM13 | 1<<CS10;
+
+	Initialise ();
+	Send_Command(0x01);
+	
+	ADCSRA |=(1<< ADPS2);
+	ADMUX |=(1<<REFS0);
+	//ADMUX |=(1<<MUX0);
+	ADCSRA |=(1<< ADIE);
+	ADCSRA |=(1<<ADEN);
+	
+	sei();
+	ADCSRA |=(1<< ADSC);
+	
+	
+	while(1)
+	{
+	}
+	
+	
+}
+
+ISR(ADC_vect)
+{
+	uint8_t Low = ADCL;
+	uint16_t  TenBitResult = ADCH<<8 | Low;
+	
+	Vin =TenBitResult;
+	
+	Vact = Vin*5/1024 ;
+	
+	dtostrf(Vact,6,3,PrintString );
+	
+	ICR1=50000;
+	OCR1A=50000;
+	
+	Location(7,1);
+	Send_String("DWOA");
+	Location(1,2);
+	Send_String(PrintString);
+	
+	Send_String (" V");
+	
+	
+	_delay_ms(3000);
+	ADCSRA |=(1<< ADSC);
+}
+

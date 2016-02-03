@@ -15,9 +15,9 @@
 #define RS PD7
 #define RW PD1
 #define En PD0
-double Vin,Vact;
-char PrintString[7];
 
+double ADC_double,Vact;
+char PrintString[7];
 char StartAddOfCol[2] = {0,64};
 
 void Send_Command(uint8_t Command)
@@ -80,13 +80,7 @@ int main()
 {
 	DDRD = (1<<RS|1<<RW|1<<En|1<<PIND5);
 	DDRC = 0xFF;
-	//DDRA= ~(1<<PINA0);
 	DataPorts = CommandPorts = 0x00;
-	DDRB = 1<<PB0;
-	PORTB &= ~(1<<PB0);
-	TCCR1A |= 1<<COM1A1 | 1<<COM1B1 | 1<<WGM11;
-	TCCR1B |= 1<<WGM12 | 1<<WGM13 | 1<<CS10;
-
 	Initialise ();
 	Send_Command(0x01);
 	
@@ -110,25 +104,15 @@ int main()
 ISR(ADC_vect)
 {
 	uint8_t Low = ADCL;
-	uint16_t  TenBitResult = ADCH<<8 | Low;
-	
-	Vin =TenBitResult;
-	
-	Vact = Vin*5/1024 ;
-	
-	dtostrf(Vact,6,3,PrintString );
-	
-	ICR1=50000;
-	OCR1A=50000;
-	
+	uint16_t  TenBitResult = ADCH<<8 | Low	
+	ADC_double =TenBitResult;
+	Vact = ADC_double*5/1024 ;
+	dtostrf(Vact,6,3,PrintString );	
 	Location(7,1);
 	Send_String("DWOA");
 	Location(1,2);
-	Send_String(PrintString);
-	
+	Send_String(PrintString);	
 	Send_String (" V");
-	
-	
 	_delay_ms(3000);
 	ADCSRA |=(1<< ADSC);
 }

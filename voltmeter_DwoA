@@ -16,7 +16,7 @@
 #define RW PD1
 #define En PD0
 
-double ADC_double,Vact;
+double ADC_double,Vin,Vact;
 char PrintString[7];
 char StartAddOfCol[2] = {0,64};
 
@@ -106,7 +106,8 @@ ISR(ADC_vect)
 	uint8_t Low = ADCL;
 	uint16_t  TenBitResult = ADCH<<8 | Low	
 	ADC_double =TenBitResult;
-	Vact = ADC_double*5/1024 ;
+	Vin = ADC_double*5/1024 ;
+        Vact = 3*Vin;
 	dtostrf(Vact,6,3,PrintString );	
 	Location(7,1);
 	Send_String("DWOA");
